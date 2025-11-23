@@ -1,0 +1,290 @@
+openapi: 3.0.3
+info:
+  title: Taxi Auth Service
+  version: 1.0.0
+  description: REST API for user authentication
+  
+tags:
+  - name: Auth
+    description: Authentication endpoints
+    
+paths:
+  /auth/register:
+    post:
+      tags:
+        - Auth
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserCredentials'
+      responses:
+        '201':
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                    example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.xxxxx"
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+          	    type: string
+                    example: "BAD_REQUEST"
+                  message:
+                    type: string
+                    example: "Incorrect email or password format"
+        '409':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+          	    type: string
+                    example: "CONFLICT"
+                  message:
+                    type: string
+                    example: "Email already used"
+
+  /auth/login:
+    post:
+      tags:
+        - Auth
+      summary: Authenticate user and return token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserCredentials'
+      responses:
+        '200':
+          description: Authentication successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                    example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.xxxxx"
+        '401':
+          description: Invalid email or password
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+          	    type: string
+                    example: "UNAUTHORIZED"
+                  error:
+                    type: string
+                    example: "Wrong email or password"
+        '400':
+          description: Incorrect email or password format
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+          	    type: string
+                    example: "BAD_REQUEST"
+                  message:
+                    type: string
+                    example: "Incorrect email or password format"
+                    
+  /auth/verify-email:
+    post:
+      tags:
+        - Auth
+      summary: Checks the email confirmation code
+      parameters:
+        - name: User-ID
+          in: header
+          required: true
+          schema:
+            type: number
+            example: 123
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                  code:
+                    type: string
+                    example: "ABCDEF"
+      responses:
+        '200':
+          description: Email verified successfully
+        '401':
+          description: Wrong code
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+          	    type: string
+                    example: "UNAUTHORIZED"
+                  message:
+                    type: string
+                    example: "Wrong code"
+                    
+  /auth/resend-code:
+    post:
+      tags:
+        - Auth
+      summary: Resends email confirmation code
+      parameters:
+        - name: User-ID
+          in: header
+          required: true
+          schema:
+            type: number
+            example: 123
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                  old password:
+                    type: string
+                    format: email
+                    example: "venom@gmail.com"
+      responses:
+        '200':
+          description: New code sent successfully
+        '400':
+          description: Invalid email
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+          	    type: string
+          	    example: "BAD_REQUEST"
+                  message:
+                    type: string
+                    example: "Invalid email"
+                    
+  /auth/change-password:
+    post:
+      tags:
+        - Auth
+      summary: Change user password
+      parameters:
+        - name: User-ID
+          in: header
+          required: true
+          schema:
+            type: number
+            example: 123
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                  old password:
+                    type: string
+                    example: "oldpassword"
+                  new password:
+                    type: string
+                    example: "newpassword"
+      responses:
+        '200':
+          description: Password changed successfully
+        '401':
+          description: Wrong password
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+          	    type: string
+                    example: "UNAUTHORIZED"
+                  message:
+                    type: string
+                    example: "Wrong old password"
+                    
+  /auth/logout:
+    post:
+      tags:
+        - Auth
+      summary: Blacklists the token
+      parameters:
+        - name: User-ID
+          in: header
+          required: true
+          schema:
+            type: number
+            example: 123
+      responses:
+        '200':
+          description: User logout successfully
+  
+  /auth/refresh-token:
+    post:
+      tags:
+        - Auth
+      summary: Refresh user token
+      parameters:
+        - name: User-ID
+          in: header
+          required: true
+          schema:
+            type: number
+            example: 123
+
+      responses:
+        '200':
+          description: Token refreshed successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                    example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.xxxxx"
+
+components:
+  schemas:
+    UserCredentials:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          example: "venom@gmail.com"
+        password:
+          type: string
+          minLength: 8
+          example: "password"
+      example:
+        email: "venom@gmail.com"
+        password: "password"
