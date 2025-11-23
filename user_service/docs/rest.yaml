@@ -1,0 +1,393 @@
+openapi: 3.0.3
+info:
+  title: User service MVP API
+  version: 1.0.0
+  description: Core user, passenger, and driver management for MVP
+
+tags:
+  - name: User
+    description: Basic user management
+  - name: Reviews
+    description: User reviews (ratings & feedback)
+  - name: Passenger
+    description: Passenger-specific profile data
+  - name: Driver
+    description: Driver-specific profile and car data
+  - name: Сar
+    description: Car information
+
+paths:
+  /users:
+    post:
+      tags: [User]
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserCreate'
+      responses:
+        '201':
+          description: User created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+
+  /users/{id}:
+    get:
+      tags: [User]
+      summary: Get basic user info
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: User found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '404':
+          description: User not found
+
+    delete:
+      tags: [User]
+      summary: Delete a user (admin or self)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: User_ID
+          in: header
+          required: true
+          schema:
+            type: integer
+        - name: User_Role
+          in: header
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: User deleted
+
+  /users/me:
+    put:
+      tags: [User]
+      summary: Update basic user info (name, email, phone)
+      parameters:
+        - name: User_ID
+          in: header
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserUpdate'
+      responses:
+        '200':
+          description: User updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+
+  /users/{id}/reviews:
+    get:
+      tags: [Reviews]
+      summary: Get reviews for a user
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of reviews
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Review'
+
+    post:
+      tags: [Reviews]
+      summary: Create a review for a user
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: User_ID
+          in: header
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReviewCreate'
+      responses:
+        '201':
+          description: Review created
+
+  /users/me/passenger:
+    put:
+      tags: [Passenger]
+      summary: Update passenger profile
+      parameters:
+        - name: User_ID
+          in: header
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PassengerProfile'
+      responses:
+        '200':
+          description: Passenger profile updated
+
+  /users/{id}/passenger:
+    get:
+      tags: [Passenger]
+      summary: Get passenger profile
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Passenger profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PassengerProfile'
+        '404':
+          description: Not a passenger or user not found
+
+  /users/me/driver:
+    put:
+      tags: [Driver]
+      summary: Update driver profile
+      parameters:
+        - name: User_ID
+          in: header
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DriverProfile'
+      responses:
+        '200':
+          description: Driver profile updated
+
+  /users/{id}/driver:
+    get:
+      tags: [Driver]
+      summary: Get driver profile
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Driver profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DriverProfile'
+        '404':
+          description: Not a driver or user not found
+  /cars/{id}:
+    get:
+      tags: [Сar]
+      summary: Get car by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Car found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Car'
+        '404':
+          description: Car not found
+
+components:
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+        name:
+          type: string
+        role:
+          type: string
+          enum: [passenger, driver]
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        is_verified:
+          type: boolean
+        is_blocked:
+          type: boolean
+
+    UserCreate:
+      type: object
+      required: [phone, role]
+      properties:
+        phone:
+          type: string
+        email:
+          type: string
+        name:
+          type: string
+        role:
+          type: string
+          enum: [passenger, driver]
+
+    UserUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+
+    Review:
+      type: object
+      properties:
+        id:
+          type: string
+        author_id:
+          type: string
+        target_id:
+          type: string
+        rating:
+          type: number
+          minimum: 1
+          maximum: 5
+        comment:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    ReviewCreate:
+      type: object
+      required: [rating]
+      properties:
+        rating:
+          type: number
+          minimum: 1
+          maximum: 5
+        comment:
+          type: string
+
+    PassengerProfile:
+      type: object
+      properties:
+        rating:
+          type: number
+        total_rides:
+          type: integer
+        favourite_addresses:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              lat:
+                type: number
+              lng:
+                type: number
+        payment_methods:
+          type: array
+          items:
+            type: string
+
+    DriverProfile:
+      type: object
+      properties:
+        rating:
+          type: number
+        total_rides:
+          type: integer
+        license_number:
+          type: string
+        is_online:
+          type: boolean
+        current_location:
+          type: object
+          properties:
+            lat:
+              type: number
+            lng:
+              type: number
+        documents:
+          type: array
+          items:
+            type: string
+        car:
+          $ref: '#/components/schemas/Car'
+
+    Car:
+      type: object
+      properties:
+        id:
+          type: string
+        brand:
+          type: string
+        model:
+          type: string
+        year:
+          type: integer
+        color:
+          type: string
+        category:
+          type: string
+        capacity:
+          type: integer
