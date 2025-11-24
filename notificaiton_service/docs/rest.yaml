@@ -1,0 +1,371 @@
+openapi: 3.0.0
+info:
+  title: Notifications Microservice API
+  description: API для управления уведомлениями пользователей, включая регистрацию устройств, получение уведомлений и настройку предпочтений
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:3000
+    description: Local development server
+paths:
+  /api/notifications/device-token:
+    post:
+      tags:
+        - Device Registration
+      summary: Регистрация устройства
+      description: Регистрирует устройство пользователя для push-уведомлений
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeviceTokenRegistration'
+      responses:
+        '201':
+          description: Устройство успешно зарегистрировано
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceRegistrationResponse'
+        '400':
+          description: Неверные данные запроса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+        '409':
+          description: Устройство уже добавленно
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Conflict'
+
+  /api/notifications/user/{id}:
+    get:
+      tags:
+        - Notifications
+      summary: Уведомления пользователя
+      description: Получает список уведомлений для конкретного пользователя
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID пользователя
+          schema:
+            type: string
+            format: uuid
+        - name: limit
+          in: query
+          description: Максимальное количество уведомлений для возврата
+          schema:
+            type: integer
+            default: 20
+            minimum: 1
+            maximum: 100
+        - name: offset
+          in: query
+          description: Смещение для пагинации
+          schema:
+            type: integer
+            default: 0
+            minimum: 0
+      responses:
+        '200':
+          description: Список уведомлений пользователя
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  notifications:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Notification'
+        '404':
+          description: Пользователь не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserNotFound'
+
+  /api/notifications/preferences:
+    put:
+      tags:
+        - Preferences
+      summary: Настройки уведомлений
+      description: Обновляет настройки уведомлений для текущего пользователя
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotificationPreferences'
+      responses:
+        '200':
+          description: Настройки успешно обновлены
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationPreferencesResponse'
+        '400':
+          description: Неверные данные запроса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdatePreferencesBadRequest'
+        '401':
+          description: Неавторизованный доступ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Unauthorize'
+
+components:
+  schemas:
+    DeviceTokenRegistration:
+      type: object
+      required:
+        - deviceToken
+        - deviceType
+      properties:
+        deviceToken:
+          type: string
+          format: uuid
+          description: Уникальный токен устройства для push-уведомлений
+          example: "00000000-0000-0000-0000-000000000000"
+        deviceType:
+          type: string
+          description: Тип устройства
+          enum: [ios, android, web]
+          example: "ios"
+        userId:
+          type: integer
+          description: ID пользователя (опционально, если не передан, используется из токена)
+          example: 123
+        deviceId:
+          type: integer
+          description: Уникальный идентификатор устройства
+          example: 456
+
+    DeviceRegistrationResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        deviceId:
+          type: integer
+          description: ID зарегистрированного устройства
+          example: 789
+        message:
+          type: string
+          example: "Device successfully registered"
+
+    Notification:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "00000000-0000-0000-0000-000000000000"
+        userId:
+          type: integer
+          example: "123"
+        title:
+          type: string
+          example: "Автомобиль подъехал"
+        message:
+          type: string
+          example: "Автомобиль х083уй модели Ebal bj-jkts-2026 series V ожидает вас"
+        createdAt:
+          type: string
+          format: date-time
+          example: "2025-11-24T10:30:00Z"
+
+    NotificationChannel:
+      type: string
+      enum: [email, push, sms, in_app]
+      example: "push"
+
+    NotificationEventType:
+      type: string
+      enum: [new_message, password_change, payment_received]
+      example: "new_message"
+
+    NotificationPreferences:
+      type: object
+      properties:
+        email:
+          type: object
+          properties:
+            enabled:
+              type: boolean
+              default: true
+            events:
+              type: array
+              items:
+                $ref: '#/components/schemas/NotificationEventType'
+          example:
+            enabled: true
+            events: ["new_message", "system_update"]
+        push:
+          type: object
+          properties:
+            enabled:
+              type: boolean
+              default: true
+            events:
+              type: array
+              items:
+                $ref: '#/components/schemas/NotificationEventType'
+          example:
+            enabled: true
+            events: ["new_message", "system_update"]
+        sms:
+          type: object
+          properties:
+            enabled:
+              type: boolean
+              default: false
+            events:
+              type: array
+              items:
+                $ref: '#/components/schemas/NotificationEventType'
+          example:
+            enabled: false
+            events: ["new_message", "system_update"]
+        inApp:
+          type: object
+          properties:
+            enabled:
+              type: boolean
+              default: true
+            events:
+              type: array
+              items:
+                $ref: '#/components/schemas/NotificationEventType'
+          example:
+            enabled: true
+            events: ["new_message", "system_update"]
+
+    NotificationPreferencesResponse:
+      type: object
+      properties:
+        userId:
+          type: integer
+          example: 123
+        preferences:
+          $ref: '#/components/schemas/NotificationPreferences'
+        message:
+          type: string
+          example: "Preferences successfully updated"
+
+    BadRequest:
+      type: object
+      properties:
+        error:
+          type: string
+          example: "Validation failed"
+        message:
+          type: string
+          example: "Device token is required"
+        statusCode:
+          type: integer
+          example: 400
+        timestamp:
+          type: string
+          format: date-time
+          example: "2025-11-24T10:30:00Z"
+    Conflict:
+      type: object
+      properties:
+        error:
+          type: string
+          example: "Validation success"
+        message:
+          type: string
+          example: "Device already exists"
+        statusCode:
+          type: integer
+          example: 409
+        timestamp:
+          type: string
+          format: date-time
+          example: "2025-11-24T10:30:00Z"
+          
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          example: "Validation failed"
+        message:
+          type: string
+          example: "Device token is required"
+        statusCode:
+          type: integer
+          example: 400
+        timestamp:
+          type: string
+          format: date-time
+          example: "2025-11-24T10:30:00Z"
+    UpdatePreferencesBadRequest:
+      type: object
+      properties:
+        error:
+          type: string
+          example: "Validation failed"
+        message:
+          type: string
+          example: "Uncorrect data format"
+        statusCode:
+          type: integer
+          example: 400
+        timestamp:
+          type: string
+          format: date-time
+          example: "2025-11-24T10:30:00Z"
+          
+    Unauthorize:   
+      type: object
+      properties:
+        error:
+          type: string
+          example: "unauthorize"
+        message:
+          type: string
+          example: "unauthorize user"
+        statusCode:
+          type: integer
+          example: 401
+        timestamp:
+          type: string
+          format: date-time
+          example: "2025-11-24T10:30:00Z"
+    UserNotFound:
+      type: object
+      properties:
+        error:
+          type: string
+          example: "Not found"
+        message:
+          type: string
+          example: "User with same ID not found"
+        statusCode:
+          type: integer
+          example: 404
+        timestamp:
+          type: string
+          format: date-time
+          example: "2025-11-24T10:30:00Z"
+  securitySchemes:
+      BearerAuth:
+        type: http
+        scheme: bearer
+        bearerFormat: JWT
+        description: |
+          JWT токен авторизации. Получить можно через эндпоинт аутентификации.
+          Пример: `Authorization: Bearer <token>`
+security:
+  - BearerAuth: []
+    
