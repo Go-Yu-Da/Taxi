@@ -1,0 +1,915 @@
+openapi: 3.0.0
+info:
+  title: AdminService API
+  description: Administrative service for managing users, rides, pricing rules and analytics
+  version: 1.0.0
+servers:
+  - url: http://localhost:8080
+    description: Development server
+  - url: https://api.example.com
+    description: Production server
+security:
+  - bearerAuth: []
+paths:
+  # Пользователи
+  /api/admin/users:
+    get:
+      x-roles-required: 
+        - admin
+      tags:
+        - Пользователи
+      summary: Список пользователей
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: size
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Успешное получение списка пользователей
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UsersListResponse'
+        '401':
+          description: Неавторизован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Запрещено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/admin/users/{id}:
+    get:
+      x-roles-required:
+        - admin
+      tags:
+        - Пользователи
+      summary: Детали пользователя
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Успешное получение деталей пользователя
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserDetailsResponse'
+        '401':
+          description: Неавторизован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Запрещено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Пользователь не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/admin/users/{id}/block:
+    put:
+      x-roles-required:
+        - admin
+      tags:
+        - Пользователи
+      summary: Заблокировать пользователя
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+      responses:
+        '200':
+          description: Пользователь успешно заблокирован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserActionResponse'
+        '400':
+          description: Неверный запрос
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Неавторизован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Запрещено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Пользователь не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/admin/users/{id}/unblock:
+    put:
+      x-roles-required:
+        - admin
+      tags:
+        - Пользователи
+      summary: Разблокировать пользователя
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                comment:
+                  type: string
+      responses:
+        '200':
+          description: Пользователь успешно разблокирован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserActionResponse'
+        '400':
+          description: Неверный запрос
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Неавторизован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Запрещено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Пользователь не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # Поездки
+  /api/admin/rides:
+    get:
+      x-roles-required:
+        - admin
+      tags:
+        - Поездки
+      summary: Список поездок
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: size
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: status
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Успешное получение списка поездок
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RidesListResponse'
+        '401':
+          description: Неавторизован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Запрещено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/admin/rides/{id}:
+    get:
+      x-roles-required: 
+        - admin
+      tags:
+        - Поездки
+      summary: Детали поездки
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Успешное получение деталей поездки
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RideDetailsResponse'
+        '401':
+          description: Неавторизован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Запрещено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Поездка не найдена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/admin/rides/{id}/cancel:
+    put:
+      x-roles-required:
+        - admin
+      tags:
+        - Поездки
+      summary: Отменить поездку
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+      responses:
+        '200':
+          description: Поездка успешно отменена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RideActionResponse'
+        '400':
+          description: Неверный запрос
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Неавторизован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Запрещено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Поездка не найдена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Конфликт состояния
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # Тарифы
+  /api/admin/pricing/rules:
+    get:
+      x-roles-required:  
+        - admin
+      tags:
+        - Тарифы
+      summary: Список тарифов
+      responses:
+        '200':
+          description: Успешное получение списка тарифов
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PricingRulesListResponse'
+        '401':
+          description: Неавторизован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Запрещено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    post:
+      x-roles-required: 
+        - admin
+      tags:
+        - Тарифы
+      summary: Создать тариф
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PricingRuleCreateRequest'
+      responses:
+        '201':
+          description: Тариф успешно создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PricingRuleResponse'
+        '400':
+          description: Неверный запрос
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Неавторизован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Запрещено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Конфликт при создании
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/admin/pricing/rules/{id}:
+    put:
+      x-roles-required: 
+        - admin
+      tags:
+        - Тарифы
+      summary: Обновить тариф
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PricingRuleUpdateRequest'
+      responses:
+        '200':
+          description: Тариф успешно обновлен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PricingRuleResponse'
+        '400':
+          description: Неверный запрос
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Неавторизован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Запрещено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Тариф не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Конфликт при обновлении
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # Аналитика
+  /api/admin/analytics/overview:
+    get:
+      x-roles-required: 
+        - admin
+      tags:
+        - Аналитика
+      summary: Общий дашборд
+      responses:
+        '200':
+          description: Успешное получение данных дашборда
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalyticsOverviewResponse'
+        '401':
+          description: Неавторизован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Запрещено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/admin/analytics/rides:
+    get:
+      x-roles-required:
+        - admin
+      tags:
+        - Аналитика
+      summary: Статистика поездок
+      parameters:
+        - name: startDate
+          in: query
+          schema:
+            type: string
+        - name: endDate
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Успешное получение статистики поездок
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RidesAnalyticsResponse'
+        '400':
+          description: Неверные параметры запроса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Неавторизован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Запрещено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/admin/analytics/revenue:
+    get:
+      x-roles-required: 
+        - admin
+      tags:
+        - Аналитика
+      summary: Финансовая статистика
+      parameters:
+        - name: startDate
+          in: query
+          schema:
+            type: string
+        - name: endDate
+          in: query
+          schema:
+            type: string
+        - name: currency
+          in: query
+          schema:
+            type: string
+            default: RUB
+      responses:
+        '200':
+          description: Успешное получение финансовой статистики
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RevenueAnalyticsResponse'
+        '400':
+          description: Неверные параметры запроса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Неавторизован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Запрещено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/admin/analytics/drivers:
+    get:
+      x-roles-required:
+        - admin
+      tags:
+        - Аналитика
+      summary: Статистика водителей
+      parameters:
+        - name: startDate
+          in: query
+          schema:
+            type: string
+        - name: endDate
+          in: query
+          schema:
+            type: string
+        - name: top
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: Успешное получение статистики водителей
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DriversAnalyticsResponse'
+        '400':
+          description: Неверные параметры запроса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Неавторизован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Запрещено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      x-roles:  # Описание ролей для документации
+        - admin
+      
+  schemas:
+    # Пользователи
+    UsersListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserListItem'
+        total:
+          type: integer
+        page:
+          type: integer
+        size:
+          type: integer
+
+    UserListItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        email:
+          type: string
+        phone:
+          type: string
+        fullName:
+          type: string
+        status:
+          type: string
+        createdAt:
+          type: string
+
+    UserDetailsResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        email:
+          type: string
+        phone:
+          type: string
+        fullName:
+          type: string
+        status:
+          type: string
+        createdAt:
+          type: string
+        lastLogin:
+          type: string
+        ridesCount:
+          type: integer
+
+    UserActionResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        userId:
+          type: integer
+
+    # Поездки
+    RidesListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/RideListItem'
+        total:
+          type: integer
+        page:
+          type: integer
+        size:
+          type: integer
+
+    RideListItem:
+      type: object
+      properties:
+        id:
+          type: string
+        userId:
+          type: integer
+        status:
+          type: string
+        pickupAddress:
+          type: string
+        dropoffAddress:
+          type: string
+        price:
+          type: number
+        createdAt:
+          type: string
+
+    RideDetailsResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        userId:
+          type: integer
+        driverId:
+          type: string
+        status:
+          type: string
+        pickupAddress:
+          type: string
+        dropoffAddress:
+          type: string
+        price:
+          type: number
+        distance:
+          type: number
+        duration:
+          type: integer
+        createdAt:
+          type: string
+
+    RideActionResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        rideId:
+          type: string
+
+    # Тарифы
+    PricingRulesListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/PricingRuleResponse'
+        total:
+          type: integer
+
+    PricingRuleResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        basePrice:
+          type: number
+        pricePerKm:
+          type: number
+        pricePerMinute:
+          type: number
+        minPrice:
+          type: number
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+
+    PricingRuleCreateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        basePrice:
+          type: number
+        pricePerKm:
+          type: number
+        pricePerMinute:
+          type: number
+        minPrice:
+          type: number
+        conditions:
+          type: object
+
+    PricingRuleUpdateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        basePrice:
+          type: number
+        pricePerKm:
+          type: number
+        pricePerMinute:
+          type: number
+        minPrice:
+          type: number
+        isActive:
+          type: boolean
+        conditions:
+          type: object
+
+    # Аналитика
+    AnalyticsOverviewResponse:
+      type: object
+      properties:
+        totalUsers:
+          type: integer
+        activeUsers:
+          type: integer
+        totalRides:
+          type: integer
+        totalRevenue:
+          type: number
+        averageRidePrice:
+          type: number
+
+    RidesAnalyticsResponse:
+      type: object
+      properties:
+        period:
+          type: object
+        totalRides:
+          type: integer
+        completedRides:
+          type: integer
+        cancelledRides:
+          type: integer
+        averageDuration:
+          type: number
+
+    RevenueAnalyticsResponse:
+      type: object
+      properties:
+        period:
+          type: object
+        totalRevenue:
+          type: number
+        totalRefunds:
+          type: number
+        netRevenue:
+          type: number
+        currency:
+          type: string
+
+    DriversAnalyticsResponse:
+      type: object
+      properties:
+        period:
+          type: object
+        totalDrivers:
+          type: integer
+        activeDrivers:
+          type: integer
+        averageRating:
+          type: number
+        topDrivers:
+          type: array
+          items:
+            $ref: '#/components/schemas/DriverStats'
+
+    DriverStats:
+      type: object
+      properties:
+        driverId:
+          type: string
+        fullName:
+          type: string
+        rating:
+          type: number
+        completedRides:
+          type: integer
+
+    # Общие
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        timestamp:
+          type: string
