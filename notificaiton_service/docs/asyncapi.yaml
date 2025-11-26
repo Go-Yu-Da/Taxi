@@ -1,0 +1,148 @@
+asyncapi: 2.6.0
+info:
+  title: notifications-service
+  version: 1.0.0
+servers:
+  production:
+    url: rabbitmq://localhost:5672
+    protocol: amqp
+    description: Production RabbitMQ server
+channels:
+  notifications.priority:
+    description: Очередь для срочных уведомлений (обновления поездок)
+    subscribe:
+      message:
+        $ref: '#/components/messages/Notification'
+    bindings:
+      amqp:
+        is: queue
+        queue:
+          exclusive: false
+          durable: true
+          autoDelete: false
+  notifications.standard:
+    description: Очередь для обычных уведомлений
+    subscribe:
+      message:
+        $ref: '#/components/messages/Notification'
+    bindings:
+      amqp:
+        is: queue
+        queue:
+          exclusive: false
+          durable: true
+          autoDelete: false
+  notifications.email.bulk:
+    description: Очередь для массовых email рассылок
+    subscribe:
+      message:
+        $ref: '#/components/messages/BulkEmailNotification'
+    bindings:
+      amqp:
+        is: queue
+        queue:
+          exclusive: false
+          durable: true
+          autoDelete: false
+components:
+  messages:
+    Notification:
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/NotificationPayload'
+      headers:
+        type: object
+        properties:
+          id:
+            type: string
+            description: Уникальный идентификатор сообщения
+          timestamp:
+            type: string
+            format: date-time
+            description: Время создания сообщения
+          version:
+            type: string
+            enum:
+              - '1.0'
+            default: '1.0'
+    BulkEmailNotification:
+      name: bulkEmailNotification
+      title: Массовая email рассылка
+      summary: Email уведомления для массовых рассылок
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/BulkEmailPayload'
+      headers:
+        type: object
+        properties:
+          id:
+            type: string
+            description: Уникальный идентификатор сообщения
+          timestamp:
+            type: string
+            format: date-time
+            description: Время создания сообщения
+          version:
+            type: string
+            enum:
+              - '1.0'
+            default: '1.0'
+  schemas:
+    NotificationPayload:
+      type: object
+      required:
+        - user_id
+        - title
+        - message
+        - sent
+      properties:
+        user_id:
+          type: string
+          format: uuid
+          description: ID пользователя
+          example: 550e8400-e29b-41d4-a716-446655440000
+        title:
+          type: string
+          description: Заголовок уведомления
+          maxLength: 100
+        message:
+          type: string
+          description: Текст уведомления
+          maxLength: 500
+        sent:
+          type: string
+          format: date-time
+          description: Время отправки уведомления
+    BulkEmailPayload:
+      type: object
+      required:
+        - recipients
+        - subject
+        - title
+        - sent
+      properties:
+        recipients:
+          type: array
+          items:
+            type: string
+            format: email
+          minItems: 1
+          description: Список получателей
+        subject:
+          type: string
+          description: Тема письма
+        title:
+          type: string
+          description: Заголовок письма
+          maxLength: 100
+        sent:
+          type: string
+          format: date-time
+          description: Время отправки письма
+tags:
+  - name: notifications
+    description: Уведомления
+  - name: priority
+    description: Высокоприоритетные уведомления
+  - name: email
+    description: Email рассылки
