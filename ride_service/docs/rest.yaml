@@ -1,0 +1,315 @@
+openapi: 3.0.3
+info:
+  title: Ride Service API
+  version: 1.0.0
+  description: Ride Service
+
+tags:
+  - name: Ride
+    description: Ride lifecycle management (create, update status, get, history)
+  - name: Passenger Rides
+    description: Passenger-specific ride operations
+  - name: Driver Rides
+    description: Driver-specific ride operations
+
+paths:
+  /rides:
+    post:
+      tags: [Ride]
+      summary: Create a new ride request
+      description: Passenger creates a ride. Triggers matching process via event.
+      parameters:
+        - name: User_ID
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: User_Role
+          in: header
+          required: true
+          schema:
+            type: string
+            enum: [passenger]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RideCreate'
+      responses:
+        '201':
+          description: Ride created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ride'
+        '400':
+          description: Invalid request (e.g. missing pickup/dropoff)
+        '403':
+          description: Only passengers can create rides
+
+  /rides/{id}:
+    get:
+      tags: [Ride]
+      summary: Get ride details
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: User_ID
+          in: header
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Ride found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ride'
+        '403':
+          description: User is not associated with this ride
+        '404':
+          description: Ride not found
+  /rides/{id}/status:
+    put:
+      tags: [Ride]
+      summary: Update ride status (e.g. cancel, complete)
+      description: Allowed for passenger or driver depending on status.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: User_ID
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: User_Role
+          in: header
+          required: true
+          schema:
+            type: string
+            enum: [passenger, driver]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RideStatusUpdate'
+      responses:
+        '200':
+          description: Ride status updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ride'
+        '400':
+          description: Invalid status transition
+        '403':
+          description: User not allowed to change status
+        '404':
+          description: Ride not found
+
+  /rides/me/passenger:
+    get:
+      tags: [Passenger Rides]
+      summary: Get current or last ride for passenger
+      parameters:
+        - name: User_ID
+          in: header
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Active or last ride
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ride'
+        '404':
+          description: No rides found
+
+  /rides/me/driver:
+    get:
+      tags: [Driver Rides]
+      summary: Get current assigned ride for driver
+      parameters:
+        - name: User_ID
+          in: header
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Active assigned ride
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ride'
+        '404':
+          description: No active ride assigned
+
+  /rides/history/passenger:
+    get:
+      tags: [Passenger Rides]
+      summary: Get ride history for passenger
+      parameters:
+        - name: User_ID
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+            maximum: 100
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: List of past rides
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Ride'
+
+  /rides/history/driver:
+    get:
+      tags: [Driver Rides]
+      summary: Get ride history for driver
+      parameters:
+        - name: User_ID
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+            maximum: 100
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: List of completed rides
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Ride'
+
+components:
+  schemas:
+    Ride:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        passenger_id:
+          type: string
+        driver_id:
+          type: string
+          nullable: true
+        pickup:
+          $ref: '#/components/schemas/Location'
+        dropoff:
+          $ref: '#/components/schemas/Location'
+        status:
+          type: string
+          enum:
+            - requested      # создан, ждёт водителя
+            - assigned       # водитель найден
+            - driver_arrived # водитель приехал
+            - in_progress    # поездка началась
+            - completed      # завершена успешно
+            - cancelled      # отменена
+            - expired        # истекло время ожидания
+        fare:
+          type: number
+          nullable: true
+        distance_meters:
+          type: integer
+          nullable: true
+        duration_seconds:
+          type: integer
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        started_at:
+          type: string
+          format: date-time
+          nullable: true
+        completed_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    RideCreate:
+      type: object
+      required: [pickup, dropoff]
+      properties:
+        pickup:
+          $ref: '#/components/schemas/Location'
+        dropoff:
+          $ref: '#/components/schemas/Location'
+        comment:
+          type: string
+          description: Optional note for driver
+
+    RideStatusUpdate:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum:
+            - cancelled    # passenger or driver
+            - driver_arrived # driver only
+            - in_progress  # driver only (start ride)
+            - completed    # driver only (end ride)
+
+    Location:
+      type: object
+      required: [lat, lng]
+      properties:
+        lat:
+          type: number
+          format: float
+          example: 55.7558
+        lng:
+          type: number
+          format: float
+          example: 37.6173
+        address:
+          type: string
+          nullable: true
+          example: "Red Square, Moscow"
