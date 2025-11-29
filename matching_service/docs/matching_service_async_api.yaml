@@ -1,0 +1,200 @@
+asyncapi: 2.6.0
+info:
+  title: Matching Service
+  version: 1.0.0
+
+servers:
+  production:
+    url: http://localhost:3000
+    protocol: ws
+    description: Production WebSocket server
+
+defaultContentType: application/json
+
+channels:
+  /ws/matching/{ride_id}:
+    description: WebSocket для пассажиров - отслеживание статуса поездки
+    parameters:
+      ride_id:
+        description: ID поездки
+        schema:
+          type: string
+    subscribe:
+      message:
+        $ref: '#/components/messages/RideStatusMessage'
+    bindings:
+      ws:
+        method: GET
+        query:
+          type: object
+          properties:
+            token:
+              type: string
+              description: Authentication token
+
+  /ws/matching/driver/{driver_id}:
+    description: WebSocket для водителей - получение новых заказов
+    parameters:
+      driver_id:
+        description: ID водителя
+        schema:
+          type: string
+    subscribe:
+      message:
+        $ref: '#/components/messages/DriverOrderMessage'
+    bindings:
+      ws:
+        method: GET
+        query:
+          type: object
+          properties:
+            token:
+              type: string
+              description: Authentication token
+
+components:
+  messages:
+    RideStatusMessage:
+      name: rideStatusMessage
+      title: Сообщение о статусе поездки
+      summary: Обновления статуса поездки для пассажира
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/RideStatusPayload'
+      headers:
+        type: object
+        properties:
+          id:
+            type: string
+            description: Уникальный идентификатор сообщения
+          timestamp:
+            type: string
+            format: date-time
+            description: Время создания сообщения
+          version:
+            type: string
+            enum: ['1.0']
+            default: '1.0'
+
+    DriverOrderMessage:
+      name: driverOrderMessage
+      title: Сообщение о новом заказе
+      summary: Новые заказы для водителя
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/DriverOrderPayload'
+      headers:
+        type: object
+        properties:
+          id:
+            type: string
+            description: Уникальный идентификатор сообщения
+          timestamp:
+            type: string
+            format: date-time
+            description: Время создания сообщения
+          version:
+            type: string
+            enum: ['1.0']
+            default: '1.0'
+
+  schemas:
+    RideStatusPayload:
+      type: object
+      required:
+        - ride_id
+        - status
+        - message
+        - sent
+      properties:
+        ride_id:
+          type: string
+          description: ID поездки
+          example: "ride_12345"
+        status:
+          type: string
+          enum: [searching, driver_assigned, driver_arriving, in_progress, completed, cancelled]
+          description: Текущий статус поездки
+        message:
+          type: string
+          description: Текст сообщения о статусе
+          maxLength: 500
+        sent:
+          type: string
+          format: date-time
+          description: Время отправки сообщения
+        driver_info:
+          type: object
+          description: Информация о водителе (если назначен)
+          properties:
+            driver_id:
+              type: string
+            name:
+              type: string
+            car_model:
+              type: string
+        estimated_arrival:
+          type: string
+          format: date-time
+          description: Расчетное время прибытия
+
+    DriverOrderPayload:
+      type: object
+      required:
+        - order_id
+        - passenger_info
+        - pickup_location
+        - destination
+        - sent
+      properties:
+        order_id:
+          type: string
+          description: ID заказа
+          example: "order_67890"
+        passenger_info:
+          type: object
+          description: Информация о пассажире
+          properties:
+            passenger_id:
+              type: string
+            name:
+              type: string
+            rating:
+              type: number
+              minimum: 0
+              maximum: 5
+        pickup_location:
+          type: object
+          description: Место посадки
+          properties:
+            address:
+              type: string
+            lat:
+              type: number
+            lng:
+              type: number
+        destination:
+          type: object
+          description: Место назначения
+          properties:
+            address:
+              type: string
+            lat:
+              type: number
+            lng:
+              type: number
+        price:
+          type: number
+          description: Стоимость поездки
+        sent:
+          type: string
+          format: date-time
+          description: Время отправки заказа
+
+tags:
+  - name: matching
+    description: Сопоставление поездок
+  - name: passenger
+    description: Функциональность для пассажиров
+  - name: driver
+    description: Функциональность для водителей

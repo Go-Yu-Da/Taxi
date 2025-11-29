@@ -1,0 +1,285 @@
+openapi: 3.0.0
+info:
+  title: Matching Service HTTP API
+  version: 1.0.0
+  description: HTTP endpoints for ride matching service
+  contact:
+    name: API Support
+    email: support@example.com
+
+servers:
+  - url: http://localhost:3000
+    description: Production server
+
+paths:
+  /api/matching/find-driver:
+    post:
+      summary: Начать поиск водителя
+      description: Создает новый заказ и начинает поиск подходящего водителя
+      tags:
+        - Matching
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FindDriverRequest'
+      responses:
+        '200':
+          description: Поиск водителя начат
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FindDriverResponse'
+        '400':
+          description: Неверные данные запроса
+        '500':
+          description: Внутренняя ошибка сервера
+
+  /api/matching/driver-response:
+    post:
+      summary: Ответ водителя на заказ
+      description: Водитель принимает или отклоняет предложенный заказ
+      tags:
+        - Driver
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DriverResponseRequest'
+      responses:
+        '200':
+          description: Ответ водителя обработан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DriverResponse'
+        '400':
+          description: Неверные данные запроса
+        '404':
+          description: Заказ не найден
+        '500':
+          description: Внутренняя ошибка сервера
+
+  /api/matching/status/{ride_id}:
+    get:
+      summary: Получить статус поиска
+      description: Возвращает текущий статус поиска водителя для поездки
+      tags:
+        - Matching
+      parameters:
+        - name: ride_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: ID поездки
+      responses:
+        '200':
+          description: Статус поиска
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RideStatusResponse'
+        '404':
+          description: Поездка не найдена
+        '500':
+          description: Внутренняя ошибка сервера
+
+components:
+  schemas:
+    # Request schemas
+    FindDriverRequest:
+      type: object
+      required:
+        - ride_id
+        - passenger_info
+        - pickup_location
+        - destination
+      properties:
+        ride_id:
+          type: string
+          description: ID поездки
+          example: "ride_12345"
+        passenger_info:
+          type: object
+          properties:
+            passenger_id:
+              type: string
+            name:
+              type: string
+            phone:
+              type: string
+          required:
+            - passenger_id
+            - name
+        pickup_location:
+          type: object
+          properties:
+            address:
+              type: string
+            lat:
+              type: number
+            lng:
+              type: number
+          required:
+            - address
+            - lat
+            - lng
+        destination:
+          type: object
+          properties:
+            address:
+              type: string
+            lat:
+              type: number
+            lng:
+              type: number
+          required:
+            - address
+            - lat
+            - lng
+        price_estimate:
+          type: number
+          description: Предварительная оценка стоимости
+
+    DriverResponseRequest:
+      type: object
+      required:
+        - order_id
+        - driver_id
+        - accepted
+      properties:
+        order_id:
+          type: string
+          description: ID заказа
+          example: "order_67890"
+        driver_id:
+          type: string
+          description: ID водителя
+        accepted:
+          type: boolean
+          description: Принял ли водитель заказ
+        decline_reason:
+          type: string
+          description: Причина отказа (если applicable)
+          enum: [too_far, wrong_direction, personal_reason, other]
+
+    # Response schemas
+    FindDriverResponse:
+      type: object
+      properties:
+        order_id:
+          type: string
+          description: ID созданного заказа
+        status:
+          type: string
+          description: Статус создания заказа
+          enum: [searching, queued, error]
+        message:
+          type: string
+          description: Сообщение о результате
+        estimated_wait_time:
+          type: number
+          description: Примерное время ожидания в минутах
+        created_at:
+          type: string
+          format: date-time
+          description: Время создания заказа
+
+    DriverResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Успешно ли обработан ответ
+        ride_id:
+          type: string
+          description: ID поездки (если водитель принял заказ)
+        next_order_available:
+          type: string
+          format: date-time
+          description: Когда водитель сможет получить следующий заказ
+        message:
+          type: string
+          description: Сообщение о результате
+
+    RideStatusResponse:
+      type: object
+      properties:
+        ride_id:
+          type: string
+          description: ID поездки
+        status:
+          type: string
+          enum: [searching, driver_assigned, driver_arriving, in_progress, completed, cancelled, no_drivers]
+          description: Текущий статус поездки
+        message:
+          type: string
+          description: Текст статуса
+        driver_info:
+          type: object
+          description: Информация о водителе (если назначен)
+          properties:
+            driver_id:
+              type: string
+            name:
+              type: string
+            car_model:
+              type: string
+            license_plate:
+              type: string
+            phone:
+              type: string
+            rating:
+              type: number
+        estimated_arrival:
+          type: string
+          format: date-time
+          description: Расчетное время прибытия водителя
+        current_location:
+          type: object
+          description: Текущее местоположение водителя (если доступно)
+          properties:
+            lat:
+              type: number
+            lng:
+              type: number
+        search_started_at:
+          type: string
+          format: date-time
+          description: Время начала поиска
+        last_updated:
+          type: string
+          format: date-time
+          description: Время последнего обновления статуса
+
+    # Common schemas (reused from AsyncAPI where applicable)
+    PassengerInfo:
+      type: object
+      properties:
+        passenger_id:
+          type: string
+        name:
+          type: string
+        phone:
+          type: string
+        rating:
+          type: number
+
+    Location:
+      type: object
+      properties:
+        address:
+          type: string
+        lat:
+          type: number
+        lng:
+          type: number
+
+tags:
+  - name: Matching
+    description: Операции сопоставления поездок
+  - name: Driver
+    description: Операции для водителей
