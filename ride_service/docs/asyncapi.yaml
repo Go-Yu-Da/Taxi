@@ -1,0 +1,211 @@
+asyncapi: 3.0.0
+info:
+  title: Ride Service
+  version: 1.0.0
+  description: |
+    Ride management microservice responsible for the full lifecycle of rides.
+    Publishes events: ride.created, ride-cancelled, driver-arrived, ride.completed.
+    Consumes event: matching.driver_assigned.
+  license:
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0
+
+servers:
+  rabbitmq:
+    host: rabbitmq
+    protocol: amqp
+    protocolVersion: '0.9.1'
+    description: RabbitMQ message broker
+
+defaultContentType: application/json
+
+channels:
+  ride.created:
+    messages:
+      RideCreated:
+        $ref: '#/components/messages/RideCreated'
+  
+  ride-cancelled:
+    address: ride-cancelled
+    messages:
+      RideCancelled:
+        $ref: '#/components/messages/RideCancelled'
+
+  driver-arrived:
+    address: driver-arrived
+    messages:
+      DriverArrived:
+        $ref: '#/components/messages/DriverArrived'
+
+  ride.completed:
+    address: ride.completed
+    messages:
+      RideCompleted:
+        $ref: '#/components/messages/RideCompleted'
+
+  matching.driver_assigned:
+    address: matching.driver_assigned
+    messages:
+      DriverAssigned:
+        $ref: '#/components/messages/DriverAssigned'
+
+operations:
+  publishRideCreated:
+    action: send
+    channel:
+      $ref: '#/channels/ride.created'
+
+  publishRideCancelled:
+    action: send
+    channel:
+      $ref: '#/channels/ride-cancelled'
+
+  publishDriverArrived:
+    action: send
+    channel:
+      $ref: '#/channels/driver-arrived'
+
+  publishRideCompleted:
+    action: send
+    channel:
+      $ref: '#/channels/ride.completed'
+
+  consumeDriverAssigned:
+    action: receive
+    channel:
+      $ref: '#/channels/matching.driver_assigned'
+
+components:
+  messages:
+    RideCreated:
+      name: RideCreated
+      summary: A new ride has been created by a passenger.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/RideCreatedPayload'
+
+    RideCancelled:
+      name: RideCancelled
+      summary: A ride has been cancelled.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/RideCancelledPayload'
+
+    DriverArrived:
+      name: DriverArrived
+      summary: Driver has arrived at pickup location.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/DriverArrivedPayload'
+
+    RideCompleted:
+      name: RideCompleted
+      summary: Ride has been completed successfully.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/RideCompletedPayload'
+
+    DriverAssigned:
+      name: DriverAssigned
+      summary: A driver has been assigned to the ride.
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/DriverAssignedPayload'
+
+  schemas:
+    RideCreatedPayload:
+      type: object
+      required: [ride_id, passenger_id, pickup, dropoff, created_at]
+      properties:
+        ride_id:
+          type: string
+          format: uuid
+        passenger_id:
+          type: string
+        pickup:
+          $ref: '#/components/schemas/Location'
+        dropoff:
+          $ref: '#/components/schemas/Location'
+        comment:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    RideCancelledPayload:
+      type: object
+      required: [ride_id, cancelled_by, cancelled_at]
+      properties:
+        ride_id:
+          type: string
+          format: uuid
+        cancelled_by:
+          type: string
+          enum: [passenger, driver]
+        reason:
+          type: string
+        cancelled_at:
+          type: string
+          format: date-time
+
+    DriverArrivedPayload:
+      type: object
+      required: [ride_id, driver_id, arrived_at]
+      properties:
+        ride_id:
+          type: string
+          format: uuid
+        driver_id:
+          type: string
+        arrived_at:
+          type: string
+          format: date-time
+
+    RideCompletedPayload:
+      type: object
+      required: [ride_id, driver_id, completed_at, distance_meters, duration_seconds]
+      properties:
+        ride_id:
+          type: string
+          format: uuid
+        driver_id:
+          type: string
+        passenger_id:
+          type: string
+        distance_meters:
+          type: integer
+          minimum: 0
+        duration_seconds:
+          type: integer
+          minimum: 0
+        completed_at:
+          type: string
+          format: date-time
+
+    DriverAssignedPayload:
+      type: object
+      required: [ride_id, driver_id, assigned_at]
+      properties:
+        ride_id:
+          type: string
+          format: uuid
+        driver_id:
+          type: string
+        assigned_at:
+          type: string
+          format: date-time
+
+    Location:
+      type: object
+      required: [lat, lng]
+      properties:
+        lat:
+          type: number
+          minimum: -90
+          maximum: 90
+        lng:
+          type: number
+          minimum: -180
+          maximum: 180
+        address:
+          type: string
