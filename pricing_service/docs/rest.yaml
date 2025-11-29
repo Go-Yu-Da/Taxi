@@ -1,0 +1,358 @@
+openapi: 3.0.0
+info:
+  title: Pricing Service REST API
+  version: 1.0.0
+  description: Микросервис для расчета стоимости поездок через REST API
+  contact:
+    name: API Support
+    email: support@example.com
+  license:
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0
+
+servers:
+  - url: http://localhost:8080
+    description: Local development server
+  - url: https://api.example.com
+    description: Production server
+
+tags:
+  - name: pricing
+    description: Расчет стоимости поездок
+  - name: rules
+    description: Управление тарифами (требуются права администратора)
+
+paths:
+  /api/pricing/estimate:
+    post:
+      tags:
+        - pricing
+      summary: Предварительная стоимость поездки
+      description: |
+        Рассчитывает предварительную стоимость поездки на основе маршрута и параметров.
+        Цена действительна в течение ограниченного времени.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PriceRequest'
+      responses:
+        '200':
+          description: Успешный расчет предварительной стоимости
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PriceResponse'
+        '400':
+          description: Неверные параметры запроса
+        '500':
+          description: Внутренняя ошибка сервера
+      security:
+        - ApiKeyAuth: []
+
+  /api/pricing/calculate-final:
+    post:
+      tags:
+        - pricing
+      summary: Финальная стоимость поездки
+      description: |
+        Рассчитывает финальную стоимость поездки после её завершения.
+        Учитывает фактическое расстояние и время.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PriceRequest'
+      responses:
+        '200':
+          description: Успешный расчет финальной стоимости
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PriceResponse'
+        '400':
+          description: Неверные параметры запроса
+        '404':
+          description: Поездка не найдена
+        '500':
+          description: Внутренняя ошибка сервера
+      security:
+        - ApiKeyAuth: []
+
+  /api/pricing/rules:
+    get:
+      tags:
+        - rules
+      summary: Получить все тарифы
+      description: Получить список всех доступных тарифов для расчета стоимости
+      responses:
+        '200':
+          description: Успешное получение тарифов
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PricingRule'
+        '401':
+          description: Неавторизованный доступ
+        '500':
+          description: Внутренняя ошибка сервера
+      security:
+        - BearerAuth: []
+
+  /api/pricing/rules/{id}:
+    put:
+      tags:
+        - rules
+      summary: Обновить тариф
+      description: Обновить существующий тариф (требуются права администратора)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: ID тарифа для обновления
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PricingRuleUpdate'
+      responses:
+        '200':
+          description: Тариф успешно обновлен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PricingRule'
+        '400':
+          description: Неверные параметры запроса
+        '401':
+          description: Неавторизованный доступ
+        '403':
+          description: Доступ запрещен (недостаточно прав)
+        '404':
+          description: Тариф не найден
+        '500':
+          description: Внутренняя ошибка сервера
+      security:
+        - BearerAuth: []
+
+components:
+  schemas:
+    PriceRequest:
+      type: object
+      required:
+        - ride_id
+        - pickup_location
+        - destination
+        - ride_type
+      properties:
+        ride_id:
+          type: string
+          description: ID поездки
+          example: "ride_12345"
+        pickup_location:
+          $ref: '#/components/schemas/Location'
+        destination:
+          $ref: '#/components/schemas/Location'
+        ride_type:
+          type: string
+          enum: [economy, comfort, business, premium]
+          description: Тип поездки
+        route_info:
+          type: object
+          description: Информация о маршруте (если доступна)
+          properties:
+            distance_meters:
+              type: number
+              description: Расстояние в метрах
+            duration_seconds:
+              type: number
+              description: Время в пути в секундах
+        surge_multiplier:
+          type: number
+          minimum: 1.0
+          default: 1.0
+          description: Коэффициент повышенного спроса
+        timestamp:
+          type: string
+          format: date-time
+          description: Время запроса расчета
+
+    PriceResponse:
+      type: object
+      required:
+        - ride_id
+        - price
+        - currency
+        - calculated_at
+      properties:
+        ride_id:
+          type: string
+          description: ID поездки
+        price:
+          type: number
+          minimum: 0
+          description: Итоговая стоимость
+        currency:
+          type: string
+          default: "RUB"
+          description: Валюта
+        price_breakdown:
+          type: object
+          description: Детализация стоимости
+          properties:
+            base_fare:
+              type: number
+              description: Базовая стоимость
+            distance_fare:
+              type: number
+              description: Стоимость за расстояние
+            time_fare:
+              type: number
+              description: Стоимость за время
+            surge_multiplier:
+              type: number
+              description: Коэффициент спроса
+            service_fee:
+              type: number
+              description: Сервисный сбор
+        calculated_at:
+          type: string
+          format: date-time
+          description: Время расчета стоимости
+        price_valid_until:
+          type: string
+          format: date-time
+          description: До какого времени цена действительна
+
+    Location:
+      type: object
+      required:
+        - lat
+        - lng
+      properties:
+        lat:
+          type: number
+          minimum: -90
+          maximum: 90
+          example: 55.7558
+        lng:
+          type: number
+          minimum: -180
+          maximum: 180
+          example: 37.6173
+        address:
+          type: string
+          description: Адрес локации
+
+    PricingRule:
+      type: object
+      required:
+        - id
+        - ride_type
+        - base_fare
+        - cost_per_km
+        - cost_per_minute
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Уникальный идентификатор тарифа
+        ride_type:
+          type: string
+          enum: [economy, comfort, business, premium]
+          description: Тип поездки, к которому применяется тариф
+        base_fare:
+          type: number
+          minimum: 0
+          description: Базовая стоимость поездки
+        cost_per_km:
+          type: number
+          minimum: 0
+          description: Стоимость за километр
+        cost_per_minute:
+          type: number
+          minimum: 0
+          description: Стоимость за минуту
+        minimum_fare:
+          type: number
+          minimum: 0
+          description: Минимальная стоимость поездки
+        surge_settings:
+          type: object
+          properties:
+            enabled:
+              type: boolean
+              default: true
+            max_multiplier:
+              type: number
+              minimum: 1.0
+              default: 3.0
+              description: Максимальный коэффициент спроса
+        active:
+          type: boolean
+          default: true
+          description: Активен ли тариф
+        created_at:
+          type: string
+          format: date-time
+          description: Время создания тарифа
+        updated_at:
+          type: string
+          format: date-time
+          description: Время последнего обновления тарифа
+
+    PricingRuleUpdate:
+      type: object
+      properties:
+        base_fare:
+          type: number
+          minimum: 0
+          description: Базовая стоимость поездки
+        cost_per_km:
+          type: number
+          minimum: 0
+          description: Стоимость за километр
+        cost_per_minute:
+          type: number
+          minimum: 0
+          description: Стоимость за минуту
+        minimum_fare:
+          type: number
+          minimum: 0
+          description: Минимальная стоимость поездки
+        surge_settings:
+          type: object
+          properties:
+            enabled:
+              type: boolean
+            max_multiplier:
+              type: number
+              minimum: 1.0
+              description: Максимальный коэффициент спроса
+        active:
+          type: boolean
+          description: Активен ли тариф
+
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: API ключ для доступа к расчету стоимости
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT токен для административных операций
+
+security:
+  - ApiKeyAuth: []
