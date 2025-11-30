@@ -1,0 +1,137 @@
+openapi: 3.0.0
+info:
+  title: PaymentsService API
+  description: Payment processing service for ride payments
+  version: 1.0.0
+servers:
+  - url: http://localhost:8081
+    description: Development server
+  - url: https://payments.api.example.com
+    description: Production server
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    PaymentRequest:
+      type: object
+      required:
+        - customerId
+        - ridePrice
+        - paymentMethod
+        - rideId
+      properties:
+        customerId:
+          type: number
+        ridePrice:
+          type: number
+        rideId:
+          type: number
+        paymentMethod:
+          type: string
+          enum: [card, sbp]
+        cardDetails:
+          type: object
+          properties:
+            cardNumber:
+              type: string
+            cardExpiry:
+              type: string
+            cardCvv:
+              type: string
+        customerEmail:
+          type: string
+        customerPhone:
+          type: string
+    PaymentSuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        paymentId:
+          type: string
+        rideId:
+          type: number
+        amount:
+          type: number
+        status:
+          type: string
+        receiptUrl:
+          type: string
+        processedAt:
+          type: string
+    PaymentFailedResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        errorCode:
+          type: string
+        errorMessage:
+          type: string
+        rideId:
+          type: string
+        attemptedAt:
+          type: string
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        timestamp:
+          type: string
+security:
+  - bearerAuth: []
+paths:
+  /payments/{id}:
+    post:
+      tags:
+        - Payments
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Ride ID
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentRequest'
+      responses:
+        '201':
+          description: Payment successfully processed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentSuccessResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Ride not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
